@@ -14,14 +14,15 @@ import pandas as pd
 import base64
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="Consulta SRI Pro", page_icon="🕵️‍♂️", layout="wide")
+st.set_page_config(page_title="Consulta SRI Original", page_icon="🦅", layout="wide")
 
-# --- FUNCIONES AUXILIARES (Tu lógica original) ---
-def human_delay(min_sec=0.5, max_sec=1.5):
-    # Aumenté ligeramente los tiempos para el servidor que suele ser más lento
+# --- FUNCIONES EXACTAS DE TU CÓDIGO ORIGINAL ---
+def human_delay(min_sec=0.1, max_sec=0.4):
+    # Ligeramente ajustado para servidor, pero manteniendo la esencia rápida
     time.sleep(random.uniform(min_sec, max_sec))
 
 def safe_click(driver, element, intentos=3):
+    # Tu lógica exacta de safe_click
     for i in range(intentos):
         try:
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element)
@@ -41,12 +42,13 @@ def safe_click(driver, element, intentos=3):
     return False
 
 def human_type(element, text):
+    # Tu lógica exacta de tipeo humano
     for char in text:
         element.send_keys(char)
         time.sleep(random.uniform(0.05, 0.15))
 
 def get_base64_screenshot(driver):
-    """Convierte la captura de pantalla a base64 para mostrarla en Streamlit sin guardarla."""
+    """Ayuda visual para debug"""
     try:
         return driver.get_screenshot_as_base64()
     except:
@@ -54,23 +56,21 @@ def get_base64_screenshot(driver):
 
 def create_driver():
     options = Options()
-    # Argumentos críticos para entorno servidor (Linux/Docker)
+    # Opciones de servidor obligatorias (no se pueden quitar)
     options.add_argument('--window-size=1920,1080')
-    options.add_argument('--headless=new') # Headless moderno
+    options.add_argument('--headless=new')
     options.add_argument('--disable-gpu')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
     
-    # Intentar instalación automática, si falla (común en algunos hostings), usar default
     try:
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
     except:
         driver = webdriver.Chrome(options=options)
     
-    # Script anti-detección
     driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
         'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'
     })
@@ -78,14 +78,12 @@ def create_driver():
     return driver
 
 def consultar_persona(driver, nombre_busqueda, debug_mode=False):
-    logs = []
-    screenshot = None
-    
+    # Lógica idéntica a tu función consultar_persona original
     try:
         driver.get("https://srienlinea.sri.gob.ec/sri-en-linea/SriPagosWeb/ConsultaDeudasFirmesImpugnadas/Consultas/consultaDeudasFirmesImpugnadas")
         human_delay(2, 3)
         
-        # 1. Limpieza de Popups (Tu código original)
+        # 1. Limpieza de Popups (Tu script original)
         driver.execute_script("""
             ['noSoportado', 'advertenciaNavegador', 'disablingDiv'].forEach(id => {
                 var el = document.getElementById(id);
@@ -94,189 +92,172 @@ def consultar_persona(driver, nombre_busqueda, debug_mode=False):
             document.body.classList.remove('modal-open');
             document.querySelectorAll('.modal-backdrop, .ui-widget-overlay').forEach(el => el.remove());
         """)
+        human_delay(0.5, 1)
         
-        wait = WebDriverWait(driver, 15) # Tiempo de espera ampliado para servidor
+        wait = WebDriverWait(driver, 15)
         
-        # 2. Click en pestaña "Apellidos y Nombres"
+        # 2. Clic en pestaña Apellidos (Tu selector original)
         try:
             btn = wait.until(EC.element_to_be_clickable(
                 (By.CSS_SELECTOR, 'button[aria-label*="apellidos y nombres"]')
             ))
-            if not safe_click(driver, btn):
-                raise Exception("No se pudo hacer click en pestaña Nombres")
+            safe_click(driver, btn)
         except Exception as e:
-            return {'error': 'Fallo al cambiar pestaña', 'logs': logs, 'img': get_base64_screenshot(driver)}
+            return {'error': 'Error click pestaña', 'img': get_base64_screenshot(driver)}
 
-        human_delay(1, 2)
+        human_delay(1.5, 2.5)
         
-        # 3. Ingresar Texto
-        try:
-            input_elem = wait.until(EC.presence_of_element_located((By.ID, "busquedaRazonSocialId")))
-            input_elem.clear()
-            # A veces el click falla si hay overlays, forzamos JS si es necesario
-            try: input_elem.click()
-            except: driver.execute_script("arguments[0].click();", input_elem)
+        # 3. Ingreso de datos
+        input_elem = wait.until(EC.presence_of_element_located((By.ID, "busquedaRazonSocialId")))
+        input_elem.clear()
+        human_delay(0.2, 0.4)
+        
+        try: input_elem.click()
+        except: pass
+        
+        human_type(input_elem, nombre_busqueda)
+        human_delay(0.5, 1)
+        
+        # --- AQUÍ ESTÁ LA MAGIA RECUPERADA ---
+        # Tu lógica original para cazar el botón Consultar
+        consultar_btn = None
+        for intento in range(10):
+            try:
+                # Intento 1: Por clase cyan-btn
+                btn = driver.find_element(By.CSS_SELECTOR, "button.cyan-btn:not([disabled])")
+                if btn.is_displayed():
+                    consultar_btn = btn
+                    break
+            except:
+                pass
             
-            human_type(input_elem, nombre_busqueda)
+            if not consultar_btn:
+                try:
+                    # Intento 2: Por texto 'Consultar' (XPath)
+                    btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Consultar')]")
+                    for b in btns:
+                        if b.is_displayed() and b.get_attribute('disabled') != 'true':
+                            consultar_btn = b
+                            break
+                except:
+                    pass
+            
+            if consultar_btn:
+                break
+            
             human_delay(0.5, 1)
+        
+        # Ejecutar la acción (Clic o Enter)
+        if not consultar_btn:
             input_elem.send_keys(Keys.ENTER)
-        except Exception as e:
-            return {'error': 'Fallo al escribir nombre', 'logs': logs, 'img': get_base64_screenshot(driver)}
+        else:
+            safe_click(driver, consultar_btn)
+        # -------------------------------------
         
-        human_delay(3, 4) # Esperar a que cargue la tabla
+        human_delay(2, 3)
         
-        # 4. Extracción de datos (Tu script JS original optimizado)
-        for intento in range(10): # 10 intentos de lectura
-            human_delay(1, 1.5)
+        # 4. Lectura de Resultados (Tu script JS original)
+        for i in range(15):
+            human_delay(1, 1.2)
             
-            # Tomar foto en cada intento si es debug mode (opcional, consume recursos)
-            if debug_mode and intento == 5:
-                screenshot = get_base64_screenshot(driver)
-
             try:
                 result = driver.execute_script("""
                     var text = document.body.innerText || "";
                     
-                    if (text.includes('Puntaje bajo') || text.includes('Captcha')) {
+                    if (text.includes('Puntaje bajo')) {
                         return {bloqueado: true};
                     }
                     
                     if (text.includes('no generó resultados')) {
-                        return {sin_resultados: true};
+                        return {sin_resultados: true, mensaje: 'La búsqueda no generó resultados'};
                     }
                     
-                    // Buscamos RUC en los spans específicos
                     var spans = document.querySelectorAll('span.titulo-consultas-1');
                     for (var i = 0; i < spans.length; i++) {
                         var txt = spans[i].textContent.trim().replace(/\\s/g, '');
-                        // Regex para RUC válido (10 a 13 dígitos)
                         if (/^\\d{10,13}$/.test(txt)) {
                             return {ruc: txt};
                         }
                     }
                     
-                    // Fallback: Buscar cualquier secuencia de 13 dígitos visible
-                    var allText = document.body.innerText;
-                    var match = allText.match(/\\d{13}/);
-                    if (match) return {ruc: match[0]};
-
                     return null;
                 """)
                 
                 if result:
-                    if result.get('ruc'):
-                        return {'ruc': result['ruc'], 'img': get_base64_screenshot(driver) if debug_mode else None}
-                    if result.get('bloqueado'):
-                        return {'error': 'Detectado como Robot/Bloqueado', 'img': get_base64_screenshot(driver)}
-                    if result.get('sin_resultados'):
-                        return {'sin_resultados': True, 'mensaje': 'Sin resultados en SRI', 'img': get_base64_screenshot(driver) if debug_mode else None}
+                    # Añadimos la imagen si está en modo debug
+                    if debug_mode: result['img'] = get_base64_screenshot(driver)
+                    return result
+                    
             except:
-                pass
+                continue
         
-        # Si llegamos aquí, no se encontró nada claro
-        return {'sin_resultados': True, 'mensaje': 'Tiempo agotado / No cargó tabla', 'img': get_base64_screenshot(driver)}
-
+        # Timeout
+        return {'sin_resultados': True, 'mensaje': 'Tiempo agotado', 'img': get_base64_screenshot(driver)}
+        
     except Exception as e:
         return {'error': str(e)[:100], 'img': get_base64_screenshot(driver)}
 
 # --- INTERFAZ STREAMLIT ---
+st.title("🦅 Consulta SRI (Motor Original)")
 
-st.title("🕵️‍♂️ Consulta Masiva SRI (Selenium Headless)")
-
-st.markdown("""
-Esta herramienta usa un navegador virtual para consultar el SRI.
-**Nota:** Si obtienes muchos errores, activa el modo Debug para ver qué está viendo el robot.
-""")
-
-# Sidebar para configuración
 with st.sidebar:
-    st.header("Configuración")
-    debug_mode = st.checkbox("📸 Modo Debug (Ver capturas)", value=False, help="Muestra una foto de lo que ve el navegador. Útil si salen errores.")
-    st.info("Si el servidor está lento, el proceso puede tardar unos 10-15 segundos por persona.")
+    debug_mode = st.checkbox("📸 Modo Debug", value=False)
+    st.info("Este modo usa exactamente tu lógica original de Python.")
 
-# Área de entrada
-txt_input = st.text_area("Pega los nombres aquí (uno por línea):", height=150, placeholder="Ejemplo:\nJUAN PEREZ\nMARIA LOPEZ")
+txt_input = st.text_area("Pega los nombres (uno por línea):", height=150)
 
-if st.button("🚀 Iniciar Búsqueda", type="primary"):
+if st.button("🚀 Iniciar Consulta Real", type="primary"):
     nombres = [n.strip() for n in txt_input.split('\n') if n.strip()]
     
     if not nombres:
-        st.warning("⚠️ Por favor ingresa al menos un nombre.")
+        st.warning("Sin nombres.")
     else:
-        # Contenedores para UI dinámica
         progress_bar = st.progress(0)
         status_text = st.empty()
         result_container = st.container()
         
-        resultados_lista = []
+        resultados = []
         driver = None
         
         try:
-            with st.spinner('🔧 Iniciando navegador virtual... (esto toma unos segundos)'):
+            with st.spinner('Cargando motor...'):
                 driver = create_driver()
             
             total = len(nombres)
-            
             for i, nombre in enumerate(nombres):
-                status_text.markdown(f"⏳ Procesando **{i+1}/{total}**: `{nombre}`...")
+                status_text.text(f"Procesando {i+1}/{total}: {nombre}")
                 
-                # LLAMADA PRINCIPAL
                 datos = consultar_persona(driver, nombre, debug_mode)
                 
-                # LÓGICA DE RESPUESTA
-                ruc_final = "Error"
-                estado = "Desconocido"
+                ruc_val = "Error"
+                if datos.get('ruc'): 
+                    ruc_val = datos['ruc']
+                    st.toast(f"✅ {nombre}: {ruc_val}")
+                elif datos.get('sin_resultados'): 
+                    ruc_val = "Sin Resultados"
+                elif datos.get('bloqueado'):
+                    ruc_val = "BLOQUEADO"
+                else: 
+                    ruc_val = datos.get('error', 'Error')
                 
-                if datos.get('ruc'):
-                    ruc_final = datos['ruc']
-                    estado = "Encontrado"
-                    st.toast(f"✅ {nombre}: {ruc_final}")
-                elif datos.get('sin_resultados'):
-                    ruc_final = "Sin Resultados"
-                    estado = "No Encontrado"
-                elif datos.get('error'):
-                    ruc_final = f"Error: {datos['error']}"
-                    estado = "Error Sistema"
-                
-                # Guardar resultado
-                resultados_lista.append({
-                    'Nombre Buscado': nombre,
-                    'Resultado RUC': ruc_final,
-                    'Estado': estado,
-                    'Fecha': time.strftime("%Y-%m-%d %H:%M")
-                })
-                
-                # ACTUALIZAR BARRA
+                resultados.append({'Nombre': nombre, 'RUC': ruc_val})
                 progress_bar.progress((i + 1) / total)
                 
-                # MOSTRAR RESULTADO VISUAL (Expandible para fotos)
                 with result_container:
-                    with st.expander(f"{'✅' if estado == 'Encontrado' else '⚠️'} {nombre} -> {ruc_final}", expanded=(debug_mode or estado == "Error Sistema")):
+                    with st.expander(f"{nombre}: {ruc_val}", expanded=debug_mode):
                         if datos.get('img'):
-                            st.image(base64.b64decode(datos['img']), caption=f"Captura del navegador para: {nombre}")
+                            st.image(base64.b64decode(datos['img']), caption="Evidencia")
                         else:
-                            st.write("No se requirió captura de pantalla.")
-                            
+                            st.write("Sin captura.")
+
         except Exception as e:
-            st.error(f"💥 Error crítico del navegador: {e}")
+            st.error(f"Error fatal: {e}")
         finally:
-            if driver:
-                driver.quit()
-            status_text.success("✅ Proceso Finalizado")
+            if driver: driver.quit()
+            status_text.text("Finalizado.")
             
-            # --- SECCIÓN DE DESCARGA ---
-            if resultados_lista:
-                df = pd.DataFrame(resultados_lista)
-                
-                st.divider()
-                st.subheader("📊 Resultados Finales")
-                st.dataframe(df, use_container_width=True)
-                
-                # Botón CSV
+            if resultados:
+                df = pd.DataFrame(resultados)
+                st.dataframe(df)
                 csv = df.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Descargar Reporte (CSV)",
-                    data=csv,
-                    file_name=f'reporte_sri_{int(time.time())}.csv',
-                    mime='text/csv',
-                )
+                st.download_button("Descargar CSV", csv, "resultados.csv", "text/csv")
